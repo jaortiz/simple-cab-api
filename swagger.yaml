@@ -1,19 +1,58 @@
 swagger: "2.0"
 info:
-  title: title
-  description: API description in Markdown.
+  title: simple cab api
+  description: API to return number of trips a medallion has made
   version: 1.0.0
-host: api.example.com
-basePath: /v1
+host: localhost:8000
+basePath: /api
 schemes:
-  - https
+  - http
+produces:
+  - application/json
+consumes:
+  - application/json
 paths:
-  /pathName:
+  /medallion:
     get:
-      summary: summary
-      description: Optional extended description in Markdown.
-      produces:
-        - application/json
+      summary:
+      parameters:
+      - in: query
+        name: medallion
       responses:
         200:
-          description: OK
+          description: An object containing medallion trip pairs
+          type: array
+          items:
+            type: object
+              properties:
+                medallion:
+                  type: string
+                trips:
+                  type: integer
+        400:
+          description: Bad Request
+  /medallion/{medallionId}:
+    get:
+      summary: summary
+      parameters:
+        - in: path
+          name: medallion
+          required: true
+          type: string
+          description: The cab medallion id
+        - in: query
+          name: date
+          type: string
+          required: true
+          description: Date to filter the number of trips a medallion made on a specific day
+      responses:
+        200:
+          description: Object containing the number of trips a medallion has made given a date
+          type: object
+            properties:
+              medallion:
+                type: string
+              trips:
+        400:
+          description: Bad Request
+  
