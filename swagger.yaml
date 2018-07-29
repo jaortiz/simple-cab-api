@@ -14,10 +14,14 @@ consumes:
 paths:
   /medallion:
     get:
-      summary:
+      summary: Get the total trips a medallion/s has made
       parameters:
       - in: query
         name: medallion
+      - in: query
+          name: ignoreCache
+          type: boolean
+          description: Flag to use the cache or not
       responses:
         200:
           description: An object containing medallion trip pairs
@@ -33,7 +37,7 @@ paths:
           description: Bad Request
   /medallion/{medallionId}:
     get:
-      summary: summary
+      summary: Get the number of trips a medallion has made on a certain date
       parameters:
         - in: path
           name: medallion
@@ -45,6 +49,10 @@ paths:
           type: string
           required: true
           description: Date to filter the number of trips a medallion made on a specific day
+        - in: query
+          name: ignoreCache
+          type: boolean
+          description: Flag to use the cache or not
       responses:
         200:
           description: Object containing the number of trips a medallion has made given a date
@@ -55,4 +63,11 @@ paths:
               trips:
         400:
           description: Bad Request
+  /medallion/clearCache:
+    get:
+      summary: Clear the medallion cache
+    responses:
+      204:
+        description: No Content
+
   
