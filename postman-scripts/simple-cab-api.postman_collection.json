@@ -1,0 +1,217 @@
+{
+	"info": {
+		"_postman_id": "cd535bdb-3c1a-4a23-b9e1-89ccdde84cab",
+		"name": "simple-cab-api",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Medallion trips by date (ignoreCache)",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {},
+				"url": {
+					"raw": "localhost:8000/api/medallions/5455D5FF2BD94D10B304A15D4B7F2735?date=2013-12-01&ignoreCache=true",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"api",
+						"medallions",
+						"5455D5FF2BD94D10B304A15D4B7F2735"
+					],
+					"query": [
+						{
+							"key": "date",
+							"value": "2013-12-01"
+						},
+						{
+							"key": "ignoreCache",
+							"value": "true"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Medallion trips by date (cache)",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {},
+				"url": {
+					"raw": "localhost:8000/api/medallions/5455D5FF2BD94D10B304A15D4B7F2735?date=2013-12-01",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"api",
+						"medallions",
+						"5455D5FF2BD94D10B304A15D4B7F2735"
+					],
+					"query": [
+						{
+							"key": "date",
+							"value": "2013-12-01"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Incorrect Medallion trip by date",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {},
+				"url": {
+					"raw": "localhost:8000/api/medallions/1?date=2013-12-01&ignoreCache=false",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"api",
+						"medallions",
+						"1"
+					],
+					"query": [
+						{
+							"key": "date",
+							"value": "2013-12-01"
+						},
+						{
+							"key": "ignoreCache",
+							"value": "false"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Total Medallion trips (cache)",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {},
+				"url": {
+					"raw": "localhost:8000/api/medallions?medallion=D7D598CD99978BD012A87A76A7C891B7",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"api",
+						"medallions"
+					],
+					"query": [
+						{
+							"key": "medallion",
+							"value": "D7D598CD99978BD012A87A76A7C891B7"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Mutliple Total Medallion Trips",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {},
+				"url": {
+					"raw": "localhost:8000/api/medallions?medallion=D7D598CD99978BD012A87A76A7C891B7&medallion=5455D5FF2BD94D10B304A15D4B7F2735&ignoreCache=true",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"api",
+						"medallions"
+					],
+					"query": [
+						{
+							"key": "medallion",
+							"value": "D7D598CD99978BD012A87A76A7C891B7"
+						},
+						{
+							"key": "medallion",
+							"value": "5455D5FF2BD94D10B304A15D4B7F2735"
+						},
+						{
+							"key": "ignoreCache",
+							"value": "true"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Clear Cache",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {},
+				"url": {
+					"raw": "localhost:8000/api/medallions/clearCache",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"api",
+						"medallions",
+						"clearCache"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Multiple Total Medallion Trips with Incorrect Medallion",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {},
+				"url": {
+					"raw": "localhost:8000/api/medallions?medallion=D7D598CD99978BD012A87A76A7C891B7&medallion=5455D5FF2BD94D10B304A15D4B7F2735&medallion=1&ignoreCache=true",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"api",
+						"medallions"
+					],
+					"query": [
+						{
+							"key": "medallion",
+							"value": "D7D598CD99978BD012A87A76A7C891B7"
+						},
+						{
+							"key": "medallion",
+							"value": "5455D5FF2BD94D10B304A15D4B7F2735"
+						},
+						{
+							"key": "medallion",
+							"value": "1"
+						},
+						{
+							"key": "ignoreCache",
+							"value": "true"
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
