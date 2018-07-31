@@ -7,90 +7,148 @@ const dbPath = resolve(__dirname, "../../db/ny_cab_data.db");
 var sqlite3 = require("sqlite3").verbose();
 const resCache = new NodeCache();
 
+/**
+ * Queries the database for number of trips a medallion has taken on a specific date. Returns a promise of the results
+ *
+ * @param {*} medallion - medallion to search
+ * @param {*} date      - date to filter search
+ * @return Promise - result of the database query
+ */
 const getMedallionTripsByDate = (medallion, date) =>
   new Promise((resolve, reject) => {
     // open database connection
     var db = new sqlite3.Database(dbPath, err => {
-      if (err) console.log("Could not connect to databse: ", err);
+      if (err) {
+        console.log("Could not connect to databse: ", err);
+        reject(`Could not connect to databse: ${err}`);
+      }
     });
 
-    // query database
-    db.all(
-      `SELECT pickup_datetime FROM cab_trip_data WHERE medallion='${medallion}'`,
-      (err, rows) => {
-        if (err) {
-          console.log("Databse Query Error: ", err);
-        } else {
-          let trips = 0;
+    db.serialize(() => {
+      db.get(
+        `SELECT EXISTS(SELECT 1 FROM cab_trip_data WHERE medallion='${medallion}') AS found`, // check if the medallion exists
+        (err, row) => {
+          if (err) {
+            console.error("DB Query Error: ", err);
+            reject(`Query Error: ${err}`);
+          }
 
-          rows.forEach(row => {
-            if (row.pickup_datetime.includes(date)) trips++;
-          });
+          if (row.found) {
+            db.get(
+              `SELECT COUNT(pickup_datetime) AS count FROM cab_trip_data WHERE medallion='${medallion}' AND pickup_datetime LIKE '%${date}%'`,
+              (err, row) => {
+                if (err) {
+                  console.error("DB Query Error: ", err);
+                  reject(`DB Query Error: ${err}`);
+                } else {
+                  const result = { medallion, date, trips: row.count };
 
-          const result = { medallion, date, trips };
-
-          //caching every result as per requirements
-          resCache.set(`${medallion}-${date}`, result, (err, success) => {
-            if (err) console.log("CACHE ERROR: ", err);
-          });
-          resolve(result);
+                  //caching every result
+                  resCache.set(
+                    `${medallion}-${date}`,
+                    result,
+                    (err, success) => {
+                      if (err) {
+                        console.error("Cache Error: ", err);
+                        reject(`Cache Error: ${err}`);
+                      } else if (success) {
+                        console.log(`Response Cached`);
+                        console.log(result);
+                      }
+                    }
+                  );
+                  resolve(result);
+                }
+              }
+            ).close();
+          } else {
+            reject(`Medallion ${medallion} does not exist`);
+          }
         }
-      }
-    );
-
-    db.close(err => {
-      if (err) console.error(err.message);
+      );
     });
   });
 
+/**
+ * Queries the database for the total number of trips a medallion has taken.
+ *
+ * @param {*} medallionList - list of medallions
+ * @return Promise - result of the database query
+ */
 const getTotalMedallionTrips = medallionList =>
   new Promise((resolve, reject) => {
     let dbPromises = [];
 
     var db = new sqlite3.Database(dbPath, err => {
-      if (err) console.log("Could not connect to databse", err);
+      if (err) {
+        console.log("Could not connect to databse: ", err);
+        reject(`Could not connect to databse: ${err}`);
+      }
     });
 
+    // for each medallion we create a new promise to deal with asynchronous database calls
     medallionList.forEach(medal => {
       dbPromises.push(
         new Promise((resolve, reject) => {
-          db.get(
-            `SELECT COUNT(*) AS count from cab_trip_data WHERE medallion='${medal}'`,
-            (err, row) => {
-              if (err) {
-                console.log(err);
-                reject(err);
-              } else {
-                resolve({ medallion: medal, trips: row.count });
+          db.serialize(() => {
+            db.get(
+              `SELECT EXISTS(SELECT 1 FROM cab_trip_data WHERE medallion='${medal}') AS found`, // check if the medallion exists
+              (err, row) => {
+                if (err) {
+                  console.error("DB Query Error: ", err);
+                  reject(`Query Error: ${err}`);
+                }
+
+                if (row.found) {
+                  db.get(
+                    `SELECT COUNT(*) AS count from cab_trip_data WHERE medallion='${medal}'`,
+                    (err, row) => {
+                      if (err) {
+                        console.error("DB Query Error: ", err);
+                        reject(`DB Query Error: ${err}`);
+                      } else {
+                        resolve({ medallion: medal, trips: row.count });
+                      }
+                    }
+                  );
+                } else {
+                  resolve({ medallion: `Medallion ${medal} does not exist` }); // resolve instead of reject here as we may be dealing with a list of medallions (reject will halt all following queries)
+                }
               }
-            }
-          );
+            );
+          });
         })
       );
     });
 
+    // resolve all the database query promises, ensures all queries are completed before further processing
     Promise.all(dbPromises)
       .then(values => {
         values.forEach(value => {
           resCache.set(value.medallion, value, (err, success) => {
-            if (err) console.log("CACHE ERROR: ", err);
+            if (err) {
+              console.error("Cache Error: ", err);
+              reject(`Cache Error: ${err}`);
+            } else if (success) {
+              console.log(`Response Cached`);
+              console.log(value);
+            }
           });
         });
+        db.close();
         resolve(values);
       })
       .catch(err => {
         console.log("Promise failed: ", err);
+        reject(`Promise failed: ${err}`);
       });
-
-    db.close(err => {
-      if (err) console.error(err.message);
-    });
   });
 
 router.get("/clearCache", (req, res) => {
   resCache.keys((err, resKeys) => {
     if (err) {
       console.log("error: ", err);
+      res.status(500).send(`Cache Error: ${err}`);
     } else {
       console.log("clearing keys");
       console.log(resKeys);
@@ -106,19 +164,23 @@ router.get("/:medallion", (req, res) => {
   const { date, ignoreCache = "false" } = req.query;
 
   if (ignoreCache === "true") {
-    getMedallionTripsByDate(medallion, date).then(result => res.send(result)); //should put a catch on this
+    getMedallionTripsByDate(medallion, date)
+      .then(result => res.send(result))
+      .catch(reason => res.status(400).send(reason));
   } else {
     resCache.get(`${medallion}-${date}`, (err, value) => {
       if (err) {
-        console.log("error: ", err);
+        console.log("Cache Error: ", err);
+        res.status(500).send(`Cache Error: ${err}`);
       } else {
         if (value != undefined) {
           res.send(value);
         } else {
-          console.log("Key not found querying the db");
-          getMedallionTripsByDate(medallion, date).then(result =>
-            res.send(result)
-          ); //should put a catch on this
+          getMedallionTripsByDate(medallion, date) // if response is not in cache we have to make a database query
+            .then(result => res.send(result))
+            .catch(reason => {
+              res.status(400).send(reason);
+            });
         }
       }
     });
@@ -136,19 +198,20 @@ router.get("/", (req, res) => {
   } else {
     //use cache
     const medallionPromises = [];
-    let resultList = [];
     medallionList.forEach(medal => {
       medallionPromises.push(
+        // using promises again here since some responses might be cached and others not. If response is not cached we have to make a database call which is asynchronous
         new Promise((resolve, reject) => {
           resCache.get(medal, (err, value) => {
             if (err) {
-              console.log("error: ", err);
+              console.log("Cache Error: ", err);
+              res.status(500).send(`Cache Error: ${err}`);
             } else {
               if (value != undefined) {
                 resolve(value);
               } else {
                 resolve(
-                  getTotalMedallionTrips([medal]).then(result => result.pop())
+                  getTotalMedallionTrips([medal]).then(result => result.pop()) // if response is not in cache we have to make a database query
                 );
               }
             }
@@ -163,6 +226,7 @@ router.get("/", (req, res) => {
       })
       .catch(err => {
         console.log("Promise failed: ", err);
+        res.status(400).send(err);
       });
   }
 });
